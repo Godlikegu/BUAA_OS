@@ -6,7 +6,7 @@ size_t strlen(const char *s) {
 		cnt++;
 		s++;
 	}
-	return 0;              //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	return cnt;              
 }
 
 char *strcpy(char *dst, const char *src) {
@@ -86,8 +86,8 @@ void *memcpy(void *out, const void *in, size_t n) {
 }
 
 int memcmp(const void *s1, const void *s2, size_t n) {
-	int * ss1 = (int *)s1;
-	int * ss2 = (int *)s2;
+	char * ss1 = (char *)s1;
+	char * ss2 = (char *)s2;
 	for (int i = 0; i < n; i++) {
 		if (ss1[i]!=ss2[i]){
 			return *ss1 - *ss2;
