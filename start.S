@@ -35,4 +35,4 @@ var:
 	sw		t2, -8(sp)
 	/* use 'j' to call the function 'hello', we use 'j' instead of 'jal' because 'hello' is 'noreturn' */
 	/* Your code here. (6/6) */
-	j _start_mips
+	j		hello
