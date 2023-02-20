@@ -90,7 +90,8 @@ int memcmp(const void *s1, const void *s2, size_t n) {
 	char * ss2 = (char *)s2;
 	for (int i = 0; i < n; i++) {
 		if (ss1[i]!=ss2[i]){
-			return *ss1 - *ss2;
+			if (ss1[i]>ss2[i]) return 1;
+			else return -1;
 		}
 	}
 	return 0;
