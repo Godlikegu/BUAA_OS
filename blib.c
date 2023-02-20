@@ -86,8 +86,8 @@ void *memcpy(void *out, const void *in, size_t n) {
 }
 
 int memcmp(const void *s1, const void *s2, size_t n) {
-	int * ss1 = s1;
-	int * ss2 = s2;
+	int * ss1 = (int *)s1;
+	int * ss2 = (int *)s2;
 	for (int i = 0; i < n; i++) {
 		if (ss1[i]!=ss2[i]){
 			return *ss1 - *ss2;
