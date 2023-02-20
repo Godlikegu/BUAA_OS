@@ -69,7 +69,7 @@ int strncmp(const char *s1, const char *s2, size_t n) {
 }
 
 void *memset(void *s, int c, size_t n) {
-	int *ss = (int *)s;
+	char *ss = (char *)s;
 	for (int i = 0; i < n; i++) {
 		ss[i] = c;
 	}
@@ -93,6 +93,7 @@ int memcmp(const void *s1, const void *s2, size_t n) {
 			if (ss1[i]>ss2[i]) return 1;
 			else return -1;
 		}
+		else ;
 	}
 	return 0;
 }
