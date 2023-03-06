@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 mkdir mydir
-chmod +wrX mydir
+chmod a+wrX mydir
 echo 2023 > myfile
 mv moveme mydir
 cp copyme mydir
