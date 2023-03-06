@@ -1,9 +1,9 @@
 #!/bin/bash
 #
 mkdir mydir
-chmod a +w mydir
-chmod a +x mydir
-chmod a +r mydir
+chmod +w mydir
+chmod +r mydir
+chmod +X mydir
 echo 2023 > myfile
 mv moveme mydir
 cp copyme mydir
