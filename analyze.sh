@@ -20,10 +20,9 @@ else
 		then 
 		echo same
 	fi
-	diff -q $1 $3
 	if [ $? -ne 0 ]
 		then 
-			echo different
+		echo different
 	fi
     ;;
     esac
