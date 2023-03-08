@@ -20,11 +20,7 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
 		/* scan for the next '%' */
 		/* Exercise 1.4: Your code here. (1/8) */
 		unsigned int i=0;
-<<<<<<< HEAD
 		char temps[1000]; /*exist some problem*/
-=======
-		char *temps;
->>>>>>> ca228fcfadd33b6f3255b334e74c855d4694ecb3
 		while (*fmt != '%' && *fmt != '\0'){
 			*(temps+i) = *fmt;	
 			++fmt;
