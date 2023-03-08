@@ -19,14 +19,13 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
 	for (;;) {
 		/* scan for the next '%' */
 		/* Exercise 1.4: Your code here. (1/8) */
-		char temps [5000];
 		unsigned int i=0;
+		char *temps;
 		while (*fmt != '%' && *fmt != '\0'){
-			temps[i] = *fmt;	
+			*(temps+i) = *fmt;	
 			++fmt;
 			++i;
 		}
-		temps[i] = '\0';
 		/* flush the string found so far */
 		/* Exercise 1.4: Your code here. (2/8) */
 		out (data, temps, i);
