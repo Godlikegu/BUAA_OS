@@ -114,13 +114,13 @@
  */
 
 /* Exercise 2.2: Your code here. */ 
-#define LIST_INSERT_AFTER(listelm, elm, field)  
-	do {
-		(elm)->field.le_prev = &LIST_NEXT((listelm), field);
-		LIST_NEXT((elm), field) = LIST_NEXT((listelm), field);
-		((LIST_NEXT((listelm), field))->field.le_prev) = &LIST_NEXT((elm), field);
-		LIST_NEXT((listelm), field) = (elm);
-	} while (0)
+#define LIST_INSERT_AFTER(listelm, elm, field)                                     \
+	do {                                                                          \
+		(elm)->field.le_prev = &LIST_NEXT((listelm), field);                       \
+		LIST_NEXT((elm), field) = LIST_NEXT((listelm), field);                          \
+		((LIST_NEXT((listelm), field))->field.le_prev) = &LIST_NEXT((elm), field);        \
+		LIST_NEXT((listelm), field) = (elm);                                                 \
+	} while (0)                     
 	
 
 /*
