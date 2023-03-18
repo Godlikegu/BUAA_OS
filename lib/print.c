@@ -20,15 +20,14 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
 		/* scan for the next '%' */
 		/* Exercise 1.4: Your code here. (1/8) */
 		unsigned int i=0;
-		char temps[1000]; /*exist some problem*/
-		while (*fmt != '%' && *fmt != '\0'){
-			*(temps+i) = *fmt;	
-			++fmt;
-			++i;
+		char * curfmt = fmt; /*exist some problem*/
+		while (*curfmt != '%' && *curfmt != '\0'){
+			curfmt ++;
 		}
 		/* flush the string found so far */
 		/* Exercise 1.4: Your code here. (2/8) */
-		out (data, temps, i);
+		out (data, fmt, curfmt-fmt);
+		fmt = curfmt;
 		/* check "are we hitting the end?" */
 		/* Exercise 1.4: Your code here. (3/8) */
 		if (*fmt == '\0'){
