@@ -9,6 +9,11 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
 	char c;
 	const char *s;
 	long num;
+	long num_start;  ////////////////////////////////////////////////
+	long num_end;       ///////////////////////////////////////////////////
+	const char * left = "(";/////////////////////////////////////////////
+	const char * right = ")";////////////////////////////////////////////
+	const char * paddle = ",";/////////////////////////////////////////////
 
 	int width;
 	int long_flag; // output is long (rather than int)
@@ -139,6 +144,31 @@ void vprintfmt(fmt_callback_t out, void *data, const char *fmt, va_list ap) {
 			s = (char *)va_arg(ap, char *);
 			print_str(out, data, s, width, ladjust);
 			break;
+		case 'R':
+			if (long_flag) {
+				num_start = va_arg(ap, long int);
+				num_end = va_arg(ap,long int);
+			}else{
+				num_start = va_arg(ap, int);
+				num_end = va_arg(ap, int);
+			}
+			out (data, left, 1);
+			if (num_start < 0){
+				neg_flag = 1;
+				num_start = -num_start;
+			}
+			print_num(out, data, num_start, 10, neg_flag, width, ladjust, padc, 0);
+			neg_flag = 0;
+			out (data, paddle, 1);
+			if (num_end < 0){
+				neg_flag = 1;
+				num_end = -num_end;
+			}
+			print_num(out, data, num_end, 10, neg_flag, width, ladjust, padc, 0);
+			out (data, right, 1);
+
+			break;
+
 
 		case '\0':
 			fmt--;
