@@ -26,10 +26,14 @@ void mips_detect_memory() {
 	/* Step 2: Calculate the corresponding 'npage' value. */
 	/* Exercise 2.1: Your code here. */
 <<<<<<< HEAD
+<<<<<<< HEAD
 	npage = memsize / 0x000c;
 =======
 
 >>>>>>> dd5772597372e2d4ddddcef25e59f1e7732e40a3
+=======
+
+>>>>>>> 824a48f43366f77a83d2966112c1eff18d57142c
 	printk("Memory size: %lu KiB, number of pages: %lu\n", memsize / 1024, npage);
 }
 
