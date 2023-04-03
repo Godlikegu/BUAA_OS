@@ -514,3 +514,38 @@ void page_check(void) {
 
 	printk("page_check() succeeded!\n");
 }
+
+
+
+u_int page_perm_stat(Pde *pgdir, struct Page *pp, u_int perm_mask){
+	Pde *pgdir_entryp;
+	Pde itemOfpp = PTE_ADDR(page2pa(pp));
+	//printk("%x\n",itemOfpp);
+	int cnt = 0;
+	int i,j;
+	for (i=0;i<1024;i++){
+		pgdir_entryp = pgdir + i;
+		if (!(PTE_V & (*pgdir_entryp))){
+			continue;	
+		}else{	
+			Pte * pgtable = (Pte*) KADDR(PTE_ADDR(*pgdir_entryp));
+			for (j = 0;j<1024;j++){
+				Pte * pte = pgtable + j;
+				if (!((*pte) & PTE_V)){
+					continue;
+				}else{
+					if ((((*pte) & 0xfffff000) == itemOfpp) && ((((*pte)<<20)>>20)&perm_mask)==perm_mask){
+						cnt++;
+					}
+				}
+			}
+		}
+	}
+	//printk("%d\n",cnt);
+	return cnt;
+
+}
+
+
+
+
