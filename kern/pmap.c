@@ -595,9 +595,32 @@ static int is_swapped(Pde *pgdir, u_long va) {
 
 static void swap(Pde *pgdir, u_int asid, u_long va) {
 	/* Your Code Here (3/3) */
-	struct Page * pp = swap_alloc(pgdir,asid);
-
-	
+	struct Page * p = swap_alloc(pgdir,asid);
+	u_long da = swap_disk;
+	*p = *(struct Page *) (da);
+	Pde *pgdir_entryp;
+		int i,j;
+		for (i=0;i<1024;i++){
+			pgdir_entryp = pgdir + i;
+			if (!(PTE_V & (*pgdir_entryp))){
+				continue;	
+			}else{	
+				Pte * pgtable = (Pte*) KADDR(PTE_ADDR(*pgdir_entryp));
+				for (j = 0;j<1024;j++){
+					Pte * pte = pgtable + j;
+					if (((*pte) & PTE_V) || !((*pte) & PTE_SWP)){
+						continue;
+					}else{
+						if (((*pte) & 0xfffff000) == ((da/BY2PG)<<12)){
+							*pte = (*pte) | (PTE_V) & (~PTE_SWP);
+							*pte = (((*pte)<<20)>>20) | ((page2pa(p))<<12);
+							tlb_invalidate(asid,((i<<22)|(j<<12)));
+						}
+					}
+				}
+			}
+		}
+		disk_free(da);
 }
 
 Pte swap_lookup(Pde *pgdir, u_int asid, u_long va) {
