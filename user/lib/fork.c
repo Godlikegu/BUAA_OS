@@ -73,13 +73,13 @@ static void duppage(u_int envid, u_int vpn) {
 	/* Step 1: Get the permission of the page. */
 	/* Hint: Use 'vpt' to find the page table entry. */
 	/* Exercise 4.10: Your code here. (1/2) */
-
+	addr = vpt + ENVX(envid);
 	/* Step 2: If the page is writable, and not shared with children, and not marked as COW yet,
 	 * then map it as copy-on-write, both in the parent (0) and the child (envid). */
 	/* Hint: The page should be first mapped to the child before remapped in the parent. (Why?)
 	 */
 	/* Exercise 4.10: Your code here. (2/2) */
-
+	if ()
 }
 
 /* Overview:
@@ -123,6 +123,7 @@ int fork(void) {
 	 *   Child's TLB Mod user exception entry should handle COW, so set it to 'cow_entry'
 	 */
 	/* Exercise 4.15: Your code here. (2/2) */
-
+	syscall_set_tlb_mod_entry(env->env_id,syscall_exofork());
+	syscall_set_env_status(env->env_id,ENV_RUNNABLE);
 	return child;
 }
