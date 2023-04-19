@@ -171,6 +171,7 @@ int sys_mem_map(u_int srcid, u_int srcva, u_int dstid, u_int dstva, u_int perm) 
 	struct Env *srcenv;
 	struct Env *dstenv;
 	struct Page *pp;
+	Pte *ppte;
 
 	/* Step 1: Check if 'srcva' and 'dstva' are legal user virtual addresses using
 	 * 'is_illegal_va'. */
@@ -188,7 +189,8 @@ int sys_mem_map(u_int srcid, u_int srcva, u_int dstid, u_int dstva, u_int perm) 
 	/* Step 4: Find the physical page mapped at 'srcva' in the address space of 'srcid'. */
 	/* Return -E_INVAL if 'srcva' is not mapped. */
 	/* Exercise 4.5: Your code here. (4/4) */
-	if (page_lookup(srcenv->env_pgdir,srcva,&pp)==NULL){
+	pp=page_lookup(srcenv->env_pgdir,srcva,&ppte);
+	if (pp==NULL){
 		return -E_INVAL;
 	}
 	/* Step 5: Map the physical page at 'dstva' in the address space of 'dstid'. */
@@ -243,10 +245,10 @@ int sys_exofork(void) {
 	try(env_alloc(&e,curenv->env_id));
 	/* Step 2: Copy the current Trapframe below 'KSTACKTOP' to the new env's 'env_tf'. */
 	/* Exercise 4.9: Your code here. (2/4) */
-	memcpy(&(e->env_tf),((struct Trapframe *)KSTACKTOP - 1),sizeof(struct Trapframe));
+	memcpy(&(e->env_tf),(KSTACKTOP - sizeof(struct Trapframe)),sizeof(struct Trapframe));
 	/* Step 3: Set the new env's 'env_tf.regs[2]' to 0 to indicate the return value in child. */
 	/* Exercise 4.9: Your code here. (3/4) */
-	(e->env_tf).regs[2] = 0;
+	e->env_tf.regs[2] = 0;
 	/* Step 4: Set up the new env's 'env_status' and 'env_pri'.  */
 	/* Exercise 4.9: Your code here. (4/4) */
 	e->env_status = ENV_NOT_RUNNABLE;
@@ -279,7 +281,7 @@ int sys_set_env_status(u_int envid, u_int status) {
 	try(envid2env(envid,&env,1));
 	/* Step 3: Update 'env_sched_list' if the 'env_status' of 'env' is being changed. */
 	/* Exercise 4.14: Your code here. (3/3) */
-	if (env->env_status == ENV_NOT_RUNNABLE && status == ENV_RUNNABLE){
+	if (env->env_status != ENV_RUNNABLE && status == ENV_RUNNABLE){
 		TAILQ_INSERT_TAIL(&env_sched_list,env,env_sched_link);
 	}
 	/* Step 4: Set the 'env_status' of 'env'. */
@@ -373,6 +375,7 @@ int sys_ipc_recv(u_int dstva) {
 int sys_ipc_try_send(u_int envid, u_int value, u_int srcva, u_int perm) {
 	struct Env *e;
 	struct Page *p;
+	Pte * ppte;
 
 	/* Step 1: Check if 'srcva' is either zero or a legal address. */
 	/* Exercise 4.8: Your code here. (4/8) */
@@ -405,11 +408,11 @@ int sys_ipc_try_send(u_int envid, u_int value, u_int srcva, u_int perm) {
 	/* Return -E_INVAL if 'srcva' is not zero and not mapped in 'curenv'. */
 	if (srcva != 0) {
 		/* Exercise 4.8: Your code here. (8/8) */
-		if (page_lookup(curenv->env_pgdir,srcva,&p)==NULL){
+		p = page_lookup(curenv->env_pgdir,srcva,&ppte);
+		if (p==NULL){
 			return -E_INVAL;
 		}
-		page_insert(e->env_pgdir,e->env_asid,p,e->env_ipc_dstva,perm);
-
+		try(page_insert(e->env_pgdir,e->env_asid,p,e->env_ipc_dstva, e->env_ipc_perm));
 	}
 	return 0;
 }
@@ -512,7 +515,7 @@ void do_syscall(struct Trapframe *tf) {
 
 	/* Step 1: Add the EPC in 'tf' by a word (size of an instruction). */
 	/* Exercise 4.2: Your code here. (1/4) */
-	tf->cp0_epc = tf->cp0_epc + 4;
+	tf->cp0_epc += sizeof(int);
 	/* Step 2: Use 'sysno' to get 'func' from 'syscall_table'. */
 	/* Exercise 4.2: Your code here. (2/4) */
 	func = syscall_table[sysno];
@@ -524,10 +527,10 @@ void do_syscall(struct Trapframe *tf) {
 	/* Step 4: Last 2 args are stored in stack at [$sp + 16 bytes], [$sp + 20 bytes]. */
 	u_int arg4, arg5;
 	/* Exercise 4.2: Your code here. (3/4) */
-	arg4 = *((int*)(tf->regs[29] + 16));///////////////////////////////////////////////////////////////////////////////////
-	arg5 = *((int*)(tf->regs[29] + 20));
+	arg4 = *(u_int*)(tf->regs[29] + 16);///////////////////////////////////////////////////////////////////////////////////
+	arg5 = *(u_int*)(tf->regs[29] + 20);
 	/* Step 5: Invoke 'func' with retrieved arguments and store its return value to $v0 in 'tf'.
 	 */
 	/* Exercise 4.2: Your code here. (4/4) */
-	tf->regs[2] = func(arg1,arg2,arg3,arg4,arg5);
+	tf->regs[2] = (*func)(arg1,arg2,arg3,arg4,arg5);
 }

@@ -2,6 +2,7 @@
 #include <lib.h>
 #include <mmu.h>
 
+
 /* Overview:
  *   Map the faulting page to a private writable copy.
  *
@@ -27,20 +28,28 @@ static void __attribute__((noreturn)) cow_entry(struct Trapframe *tf) {
 	}
 	/* Step 2: Remove 'PTE_COW' from the 'perm', and add 'PTE_D' to it. */
 	/* Exercise 4.13: Your code here. (2/6) */
-	perm = perm & (~PTE_COW) | PTE_D;
+	perm = (perm ^ PTE_COW) | PTE_D;
 	/* Step 3: Allocate a new page at 'UCOW'. */
 	/* Exercise 4.13: Your code here. (3/6) */
-	syscall_mem_alloc(0,UCOW,perm);
+	if (syscall_mem_alloc(0,UCOW,perm)!=0){
+		user_panic("page alloc error");
+	}
 	/* Step 4: Copy the content of the faulting page at 'va' to 'UCOW'. */
 	/* Hint: 'va' may not be aligned to a page! */
 	/* Exercise 4.13: Your code here. (4/6) */
-	memcpy(UCOW,ROUNDDOWN(va,BY2PG),BY2PG);
+	va = ROUNDDOWN(va,BY2PG);
+	memcpy(UCOW,va,BY2PG);
 	// Step 5: Map the page at 'UCOW' to 'va' with the new 'perm'.
 	/* Exercise 4.13: Your code here. (5/6) */
-	syscall_mem_map(0, UCOW, 0, va, perm);
+	if (syscall_mem_map(0, UCOW, 0, va, perm)!=0){
+		user_panic("error in cow_enty mem_map\n");
+    	return;
+	}
 	// Step 6: Unmap the page at 'UCOW'.
 	/* Exercise 4.13: Your code here. (6/6) */
-	syscall_mem_unmap(0,UCOW);
+	if (syscall_mem_unmap(0, UCOW) != 0) {
+    	user_panic("error in cow_entry mem_unmap\n");
+  	}
 	// Step 7: Return to the faulting routine.
 	int r = syscall_set_trapframe(0, tf);
 	user_panic("syscall_set_trapframe returned %d", r);
@@ -76,20 +85,35 @@ static void duppage(u_int envid, u_int vpn) {
 	/* Step 1: Get the permission of the page. */
 	/* Hint: Use 'vpt' to find the page table entry. */
 	/* Exercise 4.10: Your code here. (1/2) */
-	addr = vpn << PGSHIFT;
+	addr = vpn * BY2PG;
 	perm = (vpt[vpn]) & 0xfff;
 	/* Step 2: If the page is writable, and not shared with children, and not marked as COW yet,
 	 * then map it as copy-on-write, both in the parent (0) and the child (envid). */
 	/* Hint: The page should be first mapped to the child before remapped in the parent. (Why?)
 	 */
 	/* Exercise 4.10: Your code here. (2/2) */
-	if ((perm & PTE_D != 0) && (perm & PTE_LIBRARY == 0)){
-		perm = perm | PTE_COW & (~ PTE_D);
+	if ((perm & PTE_D) && (!(perm & PTE_LIBRARY)) && (!(perm & PTE_COW))){
+		perm = (perm | PTE_COW) & (~ PTE_D);
 		syscall_mem_map(0,addr,envid,addr,perm);
 		syscall_mem_map(0,addr,0,addr,perm);
 	}else{
 		syscall_mem_map(0,addr,envid,addr,perm);
 	}
+	/*if (!(perm & PTE_D)) { //只读页面
+    syscall_mem_map(0, addr, envid, addr, perm);
+  } else if (perm & PTE_COW) { // 非共享页面，写时复制
+    syscall_mem_map(0, addr, envid, addr, perm);
+  } else if (perm & PTE_LIBRARY) { // 共享页面
+    syscall_mem_map(0, addr, envid, addr, perm);
+  } else { //可写页面
+  	perm = (perm | PTE_COW) &(~PTE_D) ;
+    if (syscall_mem_map(0, addr, envid, addr, perm) != 0) {
+      user_panic("fail on could read (child)\n");
+    }
+    if (syscall_mem_map(0, addr, 0, addr, perm) != 0) {
+      user_panic("fail on could read (father)\n");
+    }
+  }*/
 }
 
 /* Overview:
@@ -125,9 +149,9 @@ int fork(void) {
 	/* Step 3: Map all mapped pages below 'USTACKTOP' into the child's address space. */
 	// Hint: You should use 'duppage'.
 	/* Exercise 4.15: Your code here. (1/2) */
-	for (i = 0; i < USTACKTOP; i+=BY2PG) {
-        if ((vpd[i >> PDSHIFT] & PTE_V) && (vpt[i>>PGSHIFT] & PTE_V)) {
-            duppage(child, VPN(i));
+	for (i = 0; i < VPN(USTACKTOP); i++) {
+        if ((vpd[i >> 10] & PTE_V) && (vpt[i] & PTE_V)) {
+            duppage(child, i);
         }
     }
 	/* Step 4: Set up the child's tlb mod handler and set child's 'env_status' to
@@ -137,7 +161,7 @@ int fork(void) {
 	 *   Child's TLB Mod user exception entry should handle COW, so set it to 'cow_entry'
 	 */
 	/* Exercise 4.15: Your code here. (2/2) */
-	try(syscall_set_tlb_mod_entry(child,cow_entry));
-	try(syscall_set_env_status(child,ENV_RUNNABLE));
+	syscall_set_tlb_mod_entry(child,cow_entry);
+	syscall_set_env_status(child,ENV_RUNNABLE);
 	return child;
 }
