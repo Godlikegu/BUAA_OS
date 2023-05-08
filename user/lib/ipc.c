@@ -37,3 +37,15 @@ u_int ipc_recv(u_int *whom, void *dstva, u_int *perm) {
 
 	return env->env_ipc_value;
 }
+
+void barrier_alloc(int n){
+	syscall_barrier_alloc(n);
+}
+
+void barrier_wait(void){
+	int r;
+	syscall_barrier_wait();
+	while ((r = syscall_barrier_isvalid) != 0) {
+		syscall_yield();
+	}
+}

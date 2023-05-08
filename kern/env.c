@@ -240,7 +240,6 @@ static int env_setup_vm(struct Env *e) {
 int env_alloc(struct Env **new, u_int parent_id) {
 	int r;
 	struct Env *e;
-
 	/* Step 1: Get a free Env from 'env_free_list' */
 	/* Exercise 3.4: Your code here. (1/4) */
 	if (LIST_EMPTY(&env_free_list)){
@@ -260,6 +259,7 @@ int env_alloc(struct Env **new, u_int parent_id) {
 	 */
 	e->env_user_tlb_mod_entry = 0; // for lab4
 	e->env_runs = 0;	       // for lab6
+	e->env_barrier = NULL;
 	/* Exercise 3.4: Your code here. (3/4) */
 	e->env_id = mkenvid(e);
 	try(asid_alloc(&(e->env_asid)));

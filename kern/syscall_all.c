@@ -253,6 +253,7 @@ int sys_exofork(void) {
 	/* Exercise 4.9: Your code here. (4/4) */
 	e->env_status = ENV_NOT_RUNNABLE;
 	e->env_pri = curenv->env_pri;
+	e->env_barrier = curenv->env_barrier;
 	return e->env_id;
 }
 
@@ -476,6 +477,28 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 	return 0;
 }
 
+void sys_barrier_alloc(int n){
+	struct Barrier barrier;
+	barrier.isvalid = 1;
+	barrier.maxnum = n;
+	barrier.numnow = 1;
+	curenv->env_barrier = &barrier;
+}
+
+int sys_barrier_isvalid(){
+	if (curenv->env_barrier == NULL){
+		return 0;
+	}
+	return (curenv->env_barrier)->isvalid;
+}
+
+void sys_barrier_wait(){
+	((curenv->env_barrier)->numnow)++;
+	if ((curenv->env_barrier)->numnow == (curenv->env_barrier)->maxnum){
+		(curenv->env_barrier)->isvalid = 0;
+	}
+}
+
 void *syscall_table[MAX_SYSNO] = {
     [SYS_putchar] = sys_putchar,
     [SYS_print_cons] = sys_print_cons,
@@ -495,6 +518,9 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+    [SYS_barrier_alloc] = sys_barrier_alloc,
+    [SYS_barrier_wait] = sys_barrier_wait,
+    [SYS_barrier_isvalid] = sys_barrier_isvalid, 
 };
 
 /* Overview:

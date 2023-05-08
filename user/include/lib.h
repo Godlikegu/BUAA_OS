@@ -55,6 +55,9 @@ int syscall_set_tlb_mod_entry(u_int envid, void (*func)(struct Trapframe *));
 int syscall_mem_alloc(u_int envid, void *va, u_int perm);
 int syscall_mem_map(u_int srcid, void *srcva, u_int dstid, void *dstva, u_int perm);
 int syscall_mem_unmap(u_int envid, void *va);
+void syscall_barrier_alloc(int n);
+void syscall_barrier_wait(void);
+int syscall_barrier_isvalid(void);
 
 __attribute__((always_inline)) inline static int syscall_exofork(void) {
 	return msyscall(SYS_exofork, 0, 0, 0, 0, 0);
@@ -72,7 +75,8 @@ int syscall_read_dev(void *, u_int, u_int);
 // ipc.c
 void ipc_send(u_int whom, u_int val, const void *srcva, u_int perm);
 u_int ipc_recv(u_int *whom, void *dstva, u_int *perm);
-
+void barrier_alloc(int n);
+void barrier_wait(void);
 // wait.c
 void wait(u_int envid);
 
