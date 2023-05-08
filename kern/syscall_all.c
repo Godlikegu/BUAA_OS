@@ -5,9 +5,9 @@
 #include <printk.h>
 #include <sched.h>
 #include <syscall.h>
-
+#include <stdio.h>
 extern struct Env *curenv;
-
+struct Barrier barrier;
 /* Overview:
  * 	This function is used to print a character on screen.
  *
@@ -254,6 +254,8 @@ int sys_exofork(void) {
 	e->env_status = ENV_NOT_RUNNABLE;
 	e->env_pri = curenv->env_pri;
 	e->env_barrier = curenv->env_barrier;
+	//printk("hahahahahahahahah: my is %x\n",e->env_barrier->numnow);
+	//printk("%x\n",e->env_barrier->numnow);
 	return e->env_id;
 }
 
@@ -478,7 +480,6 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 }
 
 void sys_barrier_alloc(int n){
-	struct Barrier barrier;
 	barrier.isvalid = 1;
 	barrier.maxnum = n;
 	barrier.numnow = 1;
@@ -494,6 +495,7 @@ int sys_barrier_isvalid(){
 
 void sys_barrier_wait(){
 	((curenv->env_barrier)->numnow)++;
+	//printk("%x\n",(curenv->env_barrier)->numnow);
 	if ((curenv->env_barrier)->numnow == (curenv->env_barrier)->maxnum){
 		(curenv->env_barrier)->isvalid = 0;
 	}
