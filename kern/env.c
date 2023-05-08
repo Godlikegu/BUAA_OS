@@ -11,7 +11,7 @@
 #define NASID 64
 
 struct Env envs[NENV] __attribute__((aligned(BY2PG))); // All environments
-
+struct Barrier barriers[NENV];
 struct Env *curenv = NULL;	      // the current env
 static struct Env_list env_free_list; // Free list
 
@@ -167,6 +167,8 @@ void env_init(void) {
 	/* Exercise 3.1: Your code here. (2/2) */
 	for (int i = NENV-1;i>=0;i--){
 		envs[i].env_status = ENV_FREE;
+		barriers[i].isvalid = 0;
+		barriers[i].maxnum = 0;
 		LIST_INSERT_HEAD(&env_free_list,&(envs[i]),env_link);
 	}
 	/*

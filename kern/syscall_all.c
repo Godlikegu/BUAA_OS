@@ -7,7 +7,9 @@
 #include <syscall.h>
 #include <stdio.h>
 extern struct Env *curenv;
-struct Barrier barrier;
+extern struct Barrier barriers[100];
+
+int count = 0;
 /* Overview:
  * 	This function is used to print a character on screen.
  *
@@ -397,7 +399,7 @@ int sys_ipc_try_send(u_int envid, u_int value, u_int srcva, u_int perm) {
 	if (e->env_ipc_recving == 0){
 		return -E_IPC_NOT_RECV;
 	}
-	/* Step 4: Set the target's ipc fields. */
+	/* Step 4: Set the target's ipc: fields. */
 	e->env_ipc_value = value;
 	e->env_ipc_from = curenv->env_id;
 	e->env_ipc_perm = PTE_V | perm;
@@ -480,6 +482,7 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 }
 
 void sys_barrier_alloc(int n){
+	struct Barrier barrier = barriers[count++];
 	barrier.isvalid = 1;
 	barrier.maxnum = n;
 	barrier.numnow = 0;
