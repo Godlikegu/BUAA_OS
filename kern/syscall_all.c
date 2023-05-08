@@ -482,7 +482,7 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 void sys_barrier_alloc(int n){
 	barrier.isvalid = 1;
 	barrier.maxnum = n;
-	barrier.numnow = 1;
+	barrier.numnow = 0;
 	curenv->env_barrier = &barrier;
 }
 
@@ -498,7 +498,9 @@ void sys_barrier_wait(){
 	//printk("%x\n",(curenv->env_barrier)->numnow);
 	if ((curenv->env_barrier)->numnow == (curenv->env_barrier)->maxnum){
 		(curenv->env_barrier)->isvalid = 0;
+		return;
 	}
+	//printk("%d should wait\n",curenv->env_id);
 }
 
 void *syscall_table[MAX_SYSNO] = {
