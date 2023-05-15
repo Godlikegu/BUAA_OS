@@ -7,7 +7,7 @@
 #include <syscall.h>
 #include <stdio.h>
 extern struct Env *curenv;
-extern struct Barrier barriers[100];
+struct Barrier barrier;
 
 int count = 0;
 /* Overview:
@@ -482,11 +482,11 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 }
 
 void sys_barrier_alloc(int n){
-	struct Barrier barrier = barriers[count++];
 	barrier.isvalid = 1;
 	barrier.maxnum = n;
 	barrier.numnow = 0;
 	curenv->env_barrier = &barrier;
+	count++;
 }
 
 int sys_barrier_isvalid(){
@@ -497,6 +497,9 @@ int sys_barrier_isvalid(){
 }
 
 void sys_barrier_wait(){
+	if ((curenv->env_barrier)==NULL){
+		return;
+	}
 	((curenv->env_barrier)->numnow)++;
 	//printk("%x\n",(curenv->env_barrier)->numnow);
 	if ((curenv->env_barrier)->numnow == (curenv->env_barrier)->maxnum){
