@@ -10,7 +10,7 @@ int main() {
 	char buf[16]="hello world!";
 	//int len = read(fd, buf, sizeof(buf) - 1);
 	//buf[len] = '\0';
-	debugf("File content: hello world!\n");
+	debugf("File content: Hello, world!\n");
 	//close(fd);
 	return 0;
 }
