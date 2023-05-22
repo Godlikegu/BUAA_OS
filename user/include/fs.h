@@ -22,7 +22,7 @@
 #define MAXFILESIZE (NINDIRECT * BY2BLK)
 
 #define BY2FILE 256
-
+#define FTYPE_LNK 2
 struct File {
 	char f_name[MAXNAMELEN]; // filename
 	uint32_t f_size;	 // file size in bytes

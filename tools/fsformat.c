@@ -239,7 +239,19 @@ struct File *create_file(struct File *dirf) {
 	int bno = make_link_block(dirf,nblk);
 	return (struct File *) (disk[bno].data);
 }
-
+void write_symlink(struct File *dirf, const char *path) {
+	struct File *target = create_file(dirf);
+	// Your code here: 使用 readlink() 函数读取链接文件指向的路径，将其写入到下一个可用的磁盘块
+	const char *fname = strrchr(path, '/');
+	if (fname) {
+		fname++;
+	} else {
+		fname = path;
+	}
+	// Your code here: 设置链接文件的文件名、大小（指向路径的字符串的长度）、类型属性
+	
+	save_block_link(target, 0, next_block(BLOCK_DATA));
+}
 // Write file to disk under specified dir.
 void write_file(struct File *dirf, const char *path) {
 	int iblk = 0, r = 0, n = sizeof(disk[0].data);
@@ -320,7 +332,7 @@ int main(int argc, char **argv) {
 	for (int i = 2; i < argc; i++) {
 		char *name = argv[i];
 		struct stat stat_buf;
-		int r = stat(name, &stat_buf);
+		int r = lstat(name, &stat_buf);
 		assert(r == 0);
 		if (S_ISDIR(stat_buf.st_mode)) {
 			printf("writing directory '%s' recursively into disk\n", name);
