@@ -8,12 +8,10 @@ int main() {
 		user_panic("open dir failed: %d", r);
 	}
 	dirfd = r;
-
 	if ((r = openat(dirfd, "test_file", O_RDWR)) < 0) {
 		user_panic("openat file filed: %d", r);
 	}
 	filefd = r;
-
 	char buf[1024];
 	char *str = "successfully open file!";
 	int len = 23;
