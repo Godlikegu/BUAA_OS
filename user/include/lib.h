@@ -7,6 +7,7 @@
 #include <pmap.h>
 #include <syscall.h>
 #include <trap.h>
+#include <signal.h>
 
 #define vpt ((volatile Pte *)UVPT)
 #define vpd ((volatile Pde *)(UVPT + (PDX(UVPT) << PGSHIFT)))
@@ -68,7 +69,12 @@ int syscall_ipc_recv(void *dstva);
 int syscall_cgetc();
 int syscall_write_dev(void *, u_int, u_int);
 int syscall_read_dev(void *, u_int, u_int);
-
+int syscall_sigprocmask(int how, const sigset_t *set, sigset_t *oldset); ///////////////////////
+int syscall_signalkill(u_int envid, int sig);//////////////////////
+int syscall_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);///////////////////////////
+int syscall_set_signal_handler_entry(u_int envid, void (*func)(struct Trapframe *));///////////////////////////
+int syscall_get_sigaction(int envid, int signum, int option);
+int syscall_get_mask(int envid, int option);
 // ipc.c
 void ipc_send(u_int whom, u_int val, const void *srcva, u_int perm);
 u_int ipc_recv(u_int *whom, void *dstva, u_int *perm);

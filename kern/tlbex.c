@@ -1,11 +1,15 @@
 #include <env.h>
 #include <pmap.h>
+#include <signal.h>
+extern struct Env* curenv;
 
 static void passive_alloc(u_int va, Pde *pgdir, u_int asid) {
 	struct Page *p = NULL;
 
 	if (va < UTEMP) {
-		panic("address too low");
+		sys_signalkill(0 ,11);
+		env_run(curenv);
+		//panic("address too low");
 	}
 
 	if (va >= USTACKTOP && va < USTACKTOP + BY2PG) {
@@ -80,4 +84,7 @@ void do_tlb_mod(struct Trapframe *tf) {
 		panic("TLB Mod but no user handler registered");
 	}
 }
+
+
+
 #endif

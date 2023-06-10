@@ -5,8 +5,16 @@
 #include <printk.h>
 #include <sched.h>
 #include <syscall.h>
+#include <signal.h>
+#include <queue.h>
 
 extern struct Env *curenv;
+
+int flag = 0;
+
+/*extern struct sigaction* sigactions[NSIGNAL];
+
+extern uint32_t sig_bitmap[NSIGNAL / 32] = {0};*/
 
 /* Overview:
  * 	This function is used to print a character on screen.
@@ -253,6 +261,9 @@ int sys_exofork(void) {
 	/* Exercise 4.9: Your code here. (4/4) */
 	e->env_status = ENV_NOT_RUNNABLE;
 	e->env_pri = curenv->env_pri;
+	e->env_sigset = curenv->env_sigset;
+	memcpy(e->env_sigactions,curenv->env_sigactions,sizeof(struct sigaction *)*64);
+	e->env_user_signal_handler_entry = curenv->env_user_signal_handler_entry;
 	return e->env_id;
 }
 
@@ -357,6 +368,8 @@ int sys_ipc_recv(u_int dstva) {
 	((struct Trapframe *)KSTACKTOP - 1)->regs[2] = 0;
 	schedule(1);
 }
+
+
 
 /* Overview:
  *   Try to send a 'value' (together with a page if 'srcva' is not 0) to the target env 'envid'.
@@ -492,6 +505,116 @@ int sys_read_dev(u_int va, u_int pa, u_int len) {
 	return -E_INVAL;
 }
 
+int sys_sigprocmask(int how, const sigset_t *set, sigset_t *oldset){
+	if ( how !=SIG_BLOCK && how != SIG_UNBLOCK && how!=SIG_SETMASK){
+        return -1;
+    }
+    if (set == NULL){
+        return -1;
+    }
+    if (oldset != NULL){
+        oldset->sig[0] = ((curenv->env_sigset)->sig)[0];
+		oldset->sig[1] = ((curenv->env_sigset)->sig)[1];
+    }
+    if (how == SIG_BLOCK){
+        ((curenv->env_sigset)->sig)[0] |= (set->sig)[0];
+		((curenv->env_sigset)->sig)[1] |= (set->sig)[1];
+    }else if (how == SIG_UNBLOCK){
+		((curenv->env_sigset)->sig)[0] &= ~((set->sig)[0]);
+		((curenv->env_sigset)->sig)[1] &= ~((set->sig)[1]);
+    }else{
+        ((curenv->env_sigset)->sig)[0] = (set->sig)[0];
+		((curenv->env_sigset)->sig)[1] = (set->sig)[1];
+    }
+    return 0;
+}
+
+
+int sys_signalkill(u_int envid, int sig){
+	struct Env *e;
+	struct sigactionNode* snode=(struct sigactionNode*) alloc(sizeof(struct sigactionNode),sizeof(int),1);
+	try(envid2env(envid,&e,0));
+	printk ("env %x get signum %d snode add=%x\n" , e,sig,&snode);
+	snode->signum = sig;
+	snode->sigaction = e->env_sigactions[sig-1];
+	TAILQ_INSERT_TAIL(&(e->env_sigaction_list),snode,env_sigaction_link);
+
+	/*struct sigactionNode* s;
+	TAILQ_FOREACH(s,&curenv->env_sigaction_list,env_sigaction_link){
+		printk("signum %d\n",s->signum);
+	}
+	printk("----------------------------------------------------\n");*/
+	/*int count = 0;
+	struct sigactionNode* s;
+	TAILQ_FOREACH(s,&curenv->env_sigaction_list,env_sigaction_link){
+
+		count++;
+	}
+	printk("curenv id:   %d; count  :%d\n",curenv->env_id,count);*/
+
+	return 0;
+}
+
+int sys_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact){
+	//printk("%d\n",signum);
+    int index = SIGNALX(signum) / 32;
+    int bitNum = SIGNALX(signum) % 32;
+
+    struct Env *e;
+	try(envid2env(0,&e,0));
+
+	e->env_sigactions[SIGNALX(signum)] = act;
+	//printk("%x\n",act);
+
+    if (oldact!=NULL){
+		oldact->sa_handler = e->env_sigactions[SIGNALX(signum)]->sa_handler;
+		oldact->sa_mask.sig[0] = e->env_sigactions[SIGNALX(signum)]->sa_mask.sig[0];
+		oldact->sa_mask.sig[1] = e->env_sigactions[SIGNALX(signum)]->sa_mask.sig[1];
+    }
+    return 0;
+}
+
+int sys_set_signal_handler_entry(u_int envid, void (*func)(struct Trapframe *, int)) {
+	struct Env *env;
+	
+	try(envid2env(envid,&env,0));
+	printk ( "env %x get signal_caller %x\n",env,func) ;
+	env->env_user_signal_handler_entry = func;
+
+}
+
+int sys_get_sigaction(int envid,int signum, int option){
+	struct Env *env;
+	
+	try(envid2env(envid,&env,0));
+
+	struct sigaction* signal = env->env_sigactions[SIGNALX(signum)];
+	if (signal==NULL){
+		return NULL;
+	}
+
+	if (option==0){
+		return (u_int) signal->sa_handler;
+	}else if (option==1){
+		return signal->sa_mask.sig[0];
+	}else{
+		return signal->sa_mask.sig[1];
+	}
+}
+
+int sys_get_mask(int envid, int option){
+	struct Env *env;
+	
+	try(envid2env(envid,&env,0));
+
+	if (option==0){
+		return env->env_sigset->sig[0];
+	}else{
+		return env->env_sigset->sig[1];
+	}
+}
+
+
 void *syscall_table[MAX_SYSNO] = {
     [SYS_putchar] = sys_putchar,
     [SYS_print_cons] = sys_print_cons,
@@ -511,6 +634,12 @@ void *syscall_table[MAX_SYSNO] = {
     [SYS_cgetc] = sys_cgetc,
     [SYS_write_dev] = sys_write_dev,
     [SYS_read_dev] = sys_read_dev,
+	[SYS_sigprocmask] = sys_sigprocmask,
+	[SYS_signalkill] = sys_signalkill,
+	[SYS_sigaction] = sys_sigaction,
+	[SYS_set_signal_handler_entry] = sys_set_signal_handler_entry,
+	[SYS_get_sigaction] = sys_get_sigaction,
+	[SYS_get_mask] = sys_get_mask,
 };
 
 /* Overview:
@@ -530,7 +659,7 @@ void do_syscall(struct Trapframe *tf) {
 		tf->regs[2] = -E_NO_SYS;
 		return;
 	}
-
+	//printk("sysno=%d\n",sysno);
 	/* Step 1: Add the EPC in 'tf' by a word (size of an instruction). */
 	/* Exercise 4.2: Your code here. (1/4) */
 	tf->cp0_epc += sizeof(int);
@@ -550,5 +679,7 @@ void do_syscall(struct Trapframe *tf) {
 	/* Step 5: Invoke 'func' with retrieved arguments and store its return value to $v0 in 'tf'.
 	 */
 	/* Exercise 4.2: Your code here. (4/4) */
+	//printk("sysno=%d\n",sysno);
 	tf->regs[2] = (*func)(arg1,arg2,arg3,arg4,arg5);
+	//printk("res=%d\n",tf->regs[2]);
 }

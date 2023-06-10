@@ -5,6 +5,7 @@
 #include <pmap.h>
 #include <printk.h>
 #include <sched.h>
+#include <signal.h>
 
 // The maximum number of available ASIDs.
 // Our bitmap requires this to be a multiple of 32.
@@ -21,6 +22,9 @@ struct Env_sched_list env_sched_list; // Runnable list
 static Pde *base_pgdir;
 
 static uint32_t asid_bitmap[NASID / 32] = {0}; // 64
+
+uint32_t sig_bitmap[2];
+
 
 /* Overview:
  *  Allocate an unused ASID.
@@ -56,6 +60,9 @@ static void asid_free(u_int i) {
 	int inner = i & 31;
 	asid_bitmap[index] &= ~(1 << inner);
 }
+
+
+
 
 /* Overview:
  *   Map [va, va+size) of virtual address space to physical [pa, pa+size) in the 'pgdir'. Use
@@ -168,6 +175,9 @@ void env_init(void) {
 	for (int i = NENV-1;i>=0;i--){
 		envs[i].env_status = ENV_FREE;
 		LIST_INSERT_HEAD(&env_free_list,&(envs[i]),env_link);
+		TAILQ_INIT(&(envs[i].env_sigaction_list));
+		//envs[i].env_user_signal_handler_entry = 0x401180;
+		memset(envs[i].env_sigactions,0,sizeof(struct sigaction*)*64);
 	}
 	/*
 	 * We want to map 'UPAGES' and 'UENVS' to *every* user space with PTE_G permission (without
@@ -267,6 +277,11 @@ int env_alloc(struct Env **new, u_int parent_id) {
 	/* Step 4: Initialize the sp and 'cp0_status' in 'e->env_tf'. */
 	// Timer interrupt (STATUS_IM4) will be enabled.
 	e->env_tf.cp0_status = STATUS_IM4 | STATUS_KUp | STATUS_IEp;
+
+	sigset_t sigset;
+	sigset.sig[0] = sigset.sig[1] = 0;
+	e->env_sigset = &sigset;
+
 	// Keep space for 'argc' and 'argv'.
 	e->env_tf.regs[29] = USTACKTOP - sizeof(int) - sizeof(char **);
 
@@ -462,6 +477,7 @@ extern void env_pop_tf(struct Trapframe *tf, u_int asid) __attribute__((noreturn
  */
 void env_run(struct Env *e) {
 	assert(e->env_status == ENV_RUNNABLE);
+	//printk("%d\n",e->env_signal_index);
 	pre_env_run(e); // WARNING: DO NOT MODIFY THIS LINE!
 
 	/* Step 1:
@@ -491,6 +507,61 @@ void env_run(struct Env *e) {
 	/* Exercise 3.8: Your code here. (2/2) */
 	env_pop_tf(&(curenv->env_tf),curenv->env_asid);
 }
+
+int isreceivable(struct Env * env , int signum){
+	int index = SIGNALX(signum) / 32;
+    int bitNum = SIGNALX(signum) % 32;
+    if ((curenv->env_sigset->sig[index] & (1 << bitNum))!=0){         // is bloked if is 1
+		return 0;
+	}else{
+		return 1;
+	}
+}
+
+void do_signal(struct Trapframe *tf){
+	struct sigactionNode * sigactionnode;
+	int signum=-1;
+
+	/*struct sigactionNode* s;
+	TAILQ_FOREACH(s,&curenv->env_sigaction_list,env_sigaction_link){
+		printk("signum %d\n",s->signum);
+	}
+	printk("----------------------------------------------------\n");*/
+
+	if (!TAILQ_EMPTY(&curenv->env_sigaction_list)){
+		TAILQ_FOREACH(sigactionnode,&curenv->env_sigaction_list,env_sigaction_link){
+			//printk("snode add = %x, signum = %d\n",sigactionnode,(*sigactionnode).signum);
+			if (isreceivable(curenv,sigactionnode->signum)){
+				signum = sigactionnode->signum;
+				break;
+			}
+		}
+	}
+	if (signum==-1){
+		return;
+	}else{
+		printk ( "ok env %x process sig %d\n" , curenv , signum ) ;
+		TAILQ_REMOVE(&curenv->env_sigaction_list,sigactionnode,env_sigaction_link);
+	}
+	if (curenv->env_user_signal_handler_entry) {
+		struct Trapframe tmp_tf = *tf;
+		if (tf->regs[29] < USTACKTOP || tf->regs[29] >= UXSTACKTOP) {
+			tf->regs[29] = UXSTACKTOP;
+		}
+		tf->regs[29] -= sizeof(struct Trapframe);
+		*(struct Trapframe *)tf->regs[29] = tmp_tf;
+		tf->regs[4] = tf->regs[29];
+		tf->regs[5] = signum;
+		tf->regs[29] -= sizeof(tf->regs[4])+sizeof(tf->regs[5]);
+		// Hint: Set 'cp0_epc' in the context 'tf' to 'curenv->env_user_tlb_mod_entry'.
+		/* Exercise 4.11: Your code here. */
+		tf->cp0_epc = curenv->env_user_signal_handler_entry;
+	} else {
+		panic("no signal user handler registered");
+	}
+}
+
+
 
 void env_check() {
 	struct Env *pe, *pe0, *pe1, *pe2;

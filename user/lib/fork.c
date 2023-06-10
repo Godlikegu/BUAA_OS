@@ -1,6 +1,7 @@
 #include <env.h>
 #include <lib.h>
 #include <mmu.h>
+#include <signal.h>
 
 
 /* Overview:
@@ -163,5 +164,6 @@ int fork(void) {
 	/* Exercise 4.15: Your code here. (2/2) */
 	syscall_set_tlb_mod_entry(child,cow_entry);
 	syscall_set_env_status(child,ENV_RUNNABLE);
+	//syscall_set_signal_handler_entry(child,signal_handler_entry);
 	return child;
 }

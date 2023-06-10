@@ -22,6 +22,12 @@ enum {
 	SYS_cgetc,
 	SYS_write_dev,
 	SYS_read_dev,
+	SYS_sigprocmask,
+	SYS_signalkill,
+	SYS_sigaction,
+	SYS_set_signal_handler_entry,
+	SYS_get_sigaction,
+	SYS_get_mask,
 	MAX_SYSNO,
 };
 

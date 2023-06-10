@@ -5,6 +5,7 @@
 #include <queue.h>
 #include <trap.h>
 #include <types.h>
+#include <signal.h>
 
 #define LOG2NENV 10
 #define NENV (1 << LOG2NENV)
@@ -14,6 +15,8 @@
 #define ENV_FREE 0
 #define ENV_RUNNABLE 1
 #define ENV_NOT_RUNNABLE 2
+
+TAILQ_HEAD(Env_sigaction_list, sigactionNode);
 
 struct Env {
 	struct Trapframe env_tf;  // Saved registers
@@ -37,6 +40,12 @@ struct Env {
 
 	// Lab 6 scheduler counts
 	u_int env_runs; // number of times been env_run'ed
+
+	sigset_t* env_sigset;
+	struct Env_sigaction_list env_sigaction_list;
+	struct sigaction* env_sigactions[64];
+	u_int env_user_signal_handler_entry;
+	
 };
 
 LIST_HEAD(Env_list, Env);
